@@ -87,3 +87,8 @@ L<https://packages.debian.org/sid/$package>.
 
 Will warn and return undef on error, e.g. the URL cannot be checked or does not
 contain negative/positive indicator of existence.
+
+TODO: If one needs to check a lot of distributions (hundreds or more) then the
+above way might be too slow and this might be better: Download
+L<https://packages.debian.org/unstable/allpackages?format=txt.gz> (at the time
+of this writing about 1.7M) then parse it locally.
