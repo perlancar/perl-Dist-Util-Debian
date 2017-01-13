@@ -1,3 +1,8 @@
+0.002   2017-01-13 (PERLANCAR)
+
+	- Add functions: dist2deb, deb_exists.
+
+
 0.001   2017-01-13 (PERLANCAR)
 
         - First release.
