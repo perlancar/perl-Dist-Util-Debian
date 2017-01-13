@@ -10,14 +10,20 @@ use warnings;
 require Exporter;
 our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(
+                       dist2deb
+                       deb_exists
                        dist_has_deb
                );
 
-sub dist_has_deb {
+sub dist2deb {
+    my $dist = shift;
+    return "lib" . lc($dist) . "-perl";
+}
+
+sub deb_exists {
     require HTTP::Tiny;
 
-    my $dist = shift;
-    my $deb = "lib" . lc($dist) . "-perl";
+    my $deb = shift;
 
     my $url = "https://packages.debian.org/sid/$deb";
     my $res = HTTP::Tiny->new->get($url);
@@ -35,14 +41,25 @@ sub dist_has_deb {
     }
 }
 
+sub dist_has_deb {
+    my $dist = shift;
+    my $deb = dist2deb($dist);
+
+    deb_exists($deb);
+}
+
 1;
 # ABSTRACT: Utilities related to Perl distribution and Debian
 
 =head1 SYNOPSIS
 
  use Dist::Util::Debian qw(
+     dist2deb
+     deb_exists
      dist_has_deb
  );
+
+ say dist2deb("HTTP-Tiny"); # -> libhttp-tiny-perl
 
  say dist_has_deb("HTTP-Tiny"); # -> 1
  say dist_has_deb("Foo");       # -> 0
@@ -53,13 +70,20 @@ sub dist_has_deb {
 
 =head1 FUNCTIONS
 
+=head2 dist2deb($dist) => str
+
+It uses the simple rule of turning C<$dist> to lowercase and adds "lib" +
+"-perl" prefix and suffix. A small percentage of distributions do not follow
+this rule.
+
+=head2 deb_exists($deb) => bool
+
 =head2 dist_has_deb($dist) => bool
 
 Return true if distribution named C<$dist> has a corresponding Debian package.
-Currently the way the routine checks this is rather naive: it converts C<$dist>
-to Debian package name by turning it to lowercase and adds "lib" + "-perl"
-prefix and suffix (a small percentage of distributions do not follow this rule).
-Then it checks against this URL: L<https://packages.debian.org/sid/$package>.
+Currently the way the routine checks this is rather naive: it checks the
+corresponding Debian package against this URL:
+L<https://packages.debian.org/sid/$package>.
 
 Will warn and return undef on error, e.g. the URL cannot be checked or does not
 contain negative/positive indicator of existence.
