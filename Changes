@@ -1,3 +1,8 @@
+0.003   2017-01-16 (PERLANCAR)
+
+        - Add option: use_allpackages.
+
+
 0.002   2017-01-13 (PERLANCAR)
 
 	- Add functions: dist2deb, deb_exists.
