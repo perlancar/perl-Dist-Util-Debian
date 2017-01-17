@@ -24,7 +24,6 @@ sub deb_exists {
     require HTTP::Tiny;
 
     my $opts = ref($_[0]) eq 'HASH' ? shift : {};
-    my $deb = shift;
 
     if ($opts->{use_allpackages}) {
         require File::Slurper::Temp;
@@ -44,36 +43,46 @@ sub deb_exists {
                   or die "gunzip failed: $IO::Uncompress::Gunzip::GunzipError";
             File::Slurper::Temp::write_text($path, $uncompressed);
         }
+        my %res;
+        my $re = join("|", map { quotemeta($_) } @_); $re = qr/^($re) \(/;
         open my($fh), "<", $path or die "Can't open $path: $!";
         while (defined(my $line = <$fh>)) {
-            return 1 if $line =~ /^\Q$deb\E \(/;
+            if ($line =~ $re) {
+                $res{$1} = 1;
+            }
         }
-        return 0;
+        return map { $res{$_} ? 1:0 } @_;
     } else {
-        my $url = "https://packages.debian.org/sid/$deb";
-        my $res = HTTP::Tiny->new->get($url);
-        unless ($res->{success}) {
-            warn "Can't check $url: $res->{status} - $res->{reason}";
-            return undef;
+        my @res;
+        for my $deb (@_) {
+            my $url = "https://packages.debian.org/sid/$deb";
+            my $res = HTTP::Tiny->new->get($url);
+            unless ($res->{success}) {
+                warn "Can't check $url: $res->{status} - $res->{reason}";
+                push @res, undef;
+                next;
+            }
+            if ($res->{content} =~ /No such package/) {
+                push @res, 0;
+                next;
+            } elsif ($res->{content} =~ /Package: \Q$deb\E \(/) {
+                push @res, 1;
+                next;
+            } else {
+                warn "Can't understand the content of $url, no indication of ".
+                    "package exists or doesn't exist";
+                push @res, undef;
+                next;
+            }
         }
-        if ($res->{content} =~ /No such package/) {
-            return 0;
-        } elsif ($res->{content} =~ /Package: \Q$deb\E \(/) {
-            return 1;
-        } else {
-            warn "Can't understand the content of $url, no indication of ".
-                "package exists or doesn't exist";
-            return undef;
-        }
+        return @res;
     }
 }
 
 sub dist_has_deb {
     my $opts = ref($_[0]) eq 'HASH' ? shift : {};
-    my $dist = shift;
-    my $deb = dist2deb($dist);
 
-    deb_exists($opts, $deb);
+    deb_exists($opts, map { dist2deb($_) } @_);
 }
 
 1;
@@ -98,7 +107,7 @@ sub dist_has_deb {
 
 =head1 FUNCTIONS
 
-=head2 dist2deb($dist) => str
+=head2 dist2deb($dist, ...) => list
 
 It uses the simple rule of turning C<$dist> to lowercase and adds "lib" +
 "-perl" prefix and suffix. A small percentage of distributions do not follow
@@ -106,7 +115,7 @@ this rule.
 
 =head2 deb_exists([ \%opts, ] $deb) => bool
 
-=head2 dist_has_deb([ \%opts, ] $dist) => bool
+=head2 dist_has_deb([ \%opts, ] $dist, ...) => bool|list
 
 Return true if distribution named C<$dist> has a corresponding Debian package.
 Currently the way the routine checks this is rather naive: it checks the
@@ -115,6 +124,8 @@ L<https://packages.debian.org/sid/$package>.
 
 Will warn and return undef on error, e.g. the URL cannot be checked or does not
 contain negative/positive indicator of existence.
+
+Can accept multiple dists and will return a list of bools in that case.
 
 Known options:
 
