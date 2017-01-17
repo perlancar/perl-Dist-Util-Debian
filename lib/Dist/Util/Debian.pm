@@ -13,6 +13,8 @@ our @EXPORT_OK = qw(
                        dist2deb
                        deb_exists
                        dist_has_deb
+                       deb_ver
+                       dist_deb_ver
                );
 
 sub dist2deb {
@@ -20,9 +22,10 @@ sub dist2deb {
     return "lib" . lc($dist) . "-perl";
 }
 
-sub deb_exists {
+sub _deb_exists_or_deb_ver {
     require HTTP::Tiny;
 
+    my $which = shift;
     my $opts = ref($_[0]) eq 'HASH' ? shift : {};
 
     if ($opts->{use_allpackages}) {
@@ -43,15 +46,15 @@ sub deb_exists {
                   or die "gunzip failed: $IO::Uncompress::Gunzip::GunzipError";
             File::Slurper::Temp::write_text($path, $uncompressed);
         }
-        my %res;
-        my $re = join("|", map { quotemeta($_) } @_); $re = qr/^($re) \(/;
+        my %versions;
+        my $re = join("|", map { quotemeta($_) } @_); $re = qr/^($re) \(([^\)]+)\)/;
         open my($fh), "<", $path or die "Can't open $path: $!";
         while (defined(my $line = <$fh>)) {
             if ($line =~ $re) {
-                $res{$1} = 1;
+                $versions{$1} = $2;
             }
         }
-        return map { $res{$_} ? 1:0 } @_;
+        return map { $which eq 'deb_exists' ? (defined $versions{$_} ? 1:0) : $versions{$_} } @_;
     } else {
         my @res;
         for my $deb (@_) {
@@ -63,10 +66,10 @@ sub deb_exists {
                 next;
             }
             if ($res->{content} =~ /No such package/) {
-                push @res, 0;
+                push @res, $which eq 'deb_exists' ? 0 : undef;
                 next;
-            } elsif ($res->{content} =~ /Package: \Q$deb\E \(/) {
-                push @res, 1;
+            } elsif ($res->{content} =~ /Package: \Q$deb\E \(([^\)]+)\)/) {
+                push @res, $which eq 'deb_exists' ? 1 : $1;
                 next;
             } else {
                 warn "Can't understand the content of $url, no indication of ".
@@ -79,10 +82,24 @@ sub deb_exists {
     }
 }
 
+sub deb_exists {
+    _deb_exists_or_deb_ver('deb_exists', @_);
+}
+
+sub deb_ver {
+    _deb_exists_or_deb_ver('deb_ver', @_);
+}
+
 sub dist_has_deb {
     my $opts = ref($_[0]) eq 'HASH' ? shift : {};
 
     deb_exists($opts, map { dist2deb($_) } @_);
+}
+
+sub dist_deb_ver {
+    my $opts = ref($_[0]) eq 'HASH' ? shift : {};
+
+    deb_ver($opts, map { dist2deb($_) } @_);
 }
 
 1;
@@ -94,12 +111,19 @@ sub dist_has_deb {
      dist2deb
      deb_exists
      dist_has_deb
+     deb_ver
+     dist_deb_ver
  );
 
  say dist2deb("HTTP-Tiny"); # -> libhttp-tiny-perl
 
  say dist_has_deb("HTTP-Tiny"); # -> 1
  say dist_has_deb("Foo");       # -> 0
+ say dist_has_deb({use_allpackages=>1}, "HTTP-Tiny", "Foo"); # -> (1, 0)
+
+ say dist_deb_ver("HTTP-Tiny"); # -> "0.070-1"
+ say dist_deb_ver("Foo");       # -> undef
+ say dist_deb_ver({use_allpackages=>1}, "HTTP-Tiny", "Foo"); # -> ("0.070-1", undef)
 
 
 =head1 DESCRIPTION
@@ -115,7 +139,9 @@ this rule.
 
 =head2 deb_exists([ \%opts, ] $deb) => bool
 
-=head2 dist_has_deb([ \%opts, ] $dist, ...) => bool|list
+=head2 dist_deb_ver([ \%opts, ] $deb) => str|list[str]
+
+=head2 dist_has_deb([ \%opts, ] $dist, ...) => bool|list[bool]
 
 Return true if distribution named C<$dist> has a corresponding Debian package.
 Currently the way the routine checks this is rather naive: it checks the
