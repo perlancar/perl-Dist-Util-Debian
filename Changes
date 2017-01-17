@@ -1,3 +1,8 @@
+0.005   2017-01-17 (PERLANCAR)
+
+	- Add functions: deb_ver, dist_deb_ver.
+
+
 0.004   2017-01-17 (PERLANCAR)
 
 	- Accept multiple dists input.

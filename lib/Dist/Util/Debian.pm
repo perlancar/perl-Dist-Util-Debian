@@ -137,10 +137,6 @@ It uses the simple rule of turning C<$dist> to lowercase and adds "lib" +
 "-perl" prefix and suffix. A small percentage of distributions do not follow
 this rule.
 
-=head2 deb_exists([ \%opts, ] $deb) => bool
-
-=head2 dist_deb_ver([ \%opts, ] $deb) => str|list[str]
-
 =head2 dist_has_deb([ \%opts, ] $dist, ...) => bool|list[bool]
 
 Return true if distribution named C<$dist> has a corresponding Debian package.
@@ -169,3 +165,9 @@ file will be cached to a temporary file and reused for a day.
 Function will return undef if the allpackages index cannot be donwloaded.
 
 =back
+
+=head2 deb_exists([ \%opts, ] $deb, ...) => bool|list[bool]
+
+=head2 deb_ver([ \%opts, ] $deb, ...) => str|list[str]
+
+=head2 dist_deb_ver([ \%opts, ] $deb, ...) => str|list[str]
