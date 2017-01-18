@@ -47,7 +47,7 @@ sub _deb_exists_or_deb_ver {
             File::Slurper::Temp::write_text($path, $uncompressed);
         }
         my %versions;
-        my $re = join("|", map { quotemeta($_) } @_); $re = qr/^($re) \(([^\)]+)\)/;
+        my $re = join("|", map { quotemeta($_) } @_); $re = qr/^($re) \(([^\)]+?)(?:\)|\s)/;
         open my($fh), "<", $path or die "Can't open $path: $!";
         while (defined(my $line = <$fh>)) {
             if ($line =~ $re) {
@@ -68,7 +68,7 @@ sub _deb_exists_or_deb_ver {
             if ($res->{content} =~ /No such package/) {
                 push @res, $which eq 'deb_exists' ? 0 : undef;
                 next;
-            } elsif ($res->{content} =~ /Package: \Q$deb\E \(([^\)]+)\)/) {
+            } elsif ($res->{content} =~ /Package: \Q$deb\E \(([^\)]+?)(?:\)|\s)/) {
                 push @res, $which eq 'deb_exists' ? 1 : $1;
                 next;
             } else {
