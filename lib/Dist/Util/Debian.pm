@@ -6,6 +6,7 @@ package Dist::Util::Debian;
 use 5.010001;
 use strict;
 use warnings;
+use Log::ger;
 
 require Exporter;
 our @ISA = qw(Exporter);
@@ -36,6 +37,7 @@ sub _deb_exists_or_deb_ver {
         my $path = File::Util::Tempdir::get_tempdir() . "/allpackages.txt";
         my @stat = stat($path);
         unless (@stat && $stat[9] > time() - 86400) {
+            log_trace "Downloading $url ...";
             my $res = HTTP::Tiny->new->get($url);
             unless ($res->{success}) {
                 warn "Can't download $url: $res->{status} - $res->{reason}";
@@ -48,6 +50,7 @@ sub _deb_exists_or_deb_ver {
         }
         my %versions;
         my $re = join("|", map { quotemeta($_) } @_); $re = qr/^($re) \(([^\)]+?)(?:\)|\s)/;
+        log_trace "Reading $path ...";
         open my($fh), "<", $path or die "Can't open $path: $!";
         while (defined(my $line = <$fh>)) {
             if ($line =~ $re) {
@@ -59,6 +62,7 @@ sub _deb_exists_or_deb_ver {
         my @res;
         for my $deb (@_) {
             my $url = "https://packages.debian.org/sid/$deb";
+            log_trace "Checking package $deb from $url ...";
             my $res = HTTP::Tiny->new->get($url);
             unless ($res->{success}) {
                 warn "Can't check $url: $res->{status} - $res->{reason}";
