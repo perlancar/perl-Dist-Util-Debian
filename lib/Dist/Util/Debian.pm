@@ -24,14 +24,13 @@ sub dist2deb {
 }
 
 sub _deb_exists_or_deb_ver {
-    require HTTP::Tiny;
-
     my $which = shift;
     my $opts = ref($_[0]) eq 'HASH' ? shift : {};
 
     if ($opts->{use_allpackages}) {
         require File::Slurper::Temp;
         require File::Util::Tempdir;
+        require HTTP::Tiny;
         require IO::Uncompress::Gunzip;
         my $url  = "https://packages.debian.org/unstable/allpackages?format=txt.gz";
         my $path = File::Util::Tempdir::get_tempdir() . "/allpackages.txt";
@@ -59,6 +58,7 @@ sub _deb_exists_or_deb_ver {
         }
         return map { $which eq 'deb_exists' ? (defined $versions{$_} ? 1:0) : $versions{$_} } @_;
     } else {
+        require HTTP::Tiny;
         my @res;
         for my $deb (@_) {
             my $url = "https://packages.debian.org/sid/$deb";
