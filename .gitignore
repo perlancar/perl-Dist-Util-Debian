@@ -2,3 +2,4 @@ Dist-Util-Debian-*
 .build
 *~
 nytprof*
+.DS_Store
